@@ -25,3 +25,30 @@ export function useGetInstagramPost() {
     [fetch]
   );
 }
+
+export type GetInstagramUserPostsRequest = {
+  username: string;
+};
+
+export type GetInstagramUserPostsResponse = {
+  data: Array<{
+    shortcode: string;
+    id: string;
+    url: string;
+  }>;
+  error?: string;
+  message?: string;
+};
+
+export function useGetInstagramUserPosts() {
+  const fetch = useFetch();
+
+  return React.useCallback(
+    (data: GetInstagramUserPostsRequest, requestConfig?: RequestConfigType) => {
+      return fetch(`/api/instagram/${data.username}`, requestConfig).then(
+        wrapperFetchJsonResponse<GetInstagramUserPostsResponse>
+      );
+    },
+    [fetch]
+  );
+}

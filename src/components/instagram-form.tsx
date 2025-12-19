@@ -22,8 +22,16 @@ import { Button } from "@/components/ui/button";
 
 import { Download, Loader2, X } from "lucide-react";
 
-import { cn, getPostShortcode, isShortcodePresent } from "@/lib/utils";
-import { useGetInstagramPostMutation } from "@/features/react-query/mutations/instagram";
+import {
+  cn,
+  getPostShortcode,
+  isShortcodePresent,
+  getUsernameFromUrl,
+} from "@/lib/utils";
+import {
+  useGetInstagramPostMutation,
+  useGetInstagramUserPostsMutation,
+} from "@/features/react-query/mutations/instagram";
 import { HTTP_CODE_ENUM } from "@/features/api/http-codes";
 
 // 5 minutes
@@ -93,6 +101,7 @@ type CachedUrl = {
 
 export function InstagramForm(props: { className?: string }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const usernameInputRef = React.useRef<HTMLInputElement>(null);
   const cachedUrls = React.useRef(new Map<string, CachedUrl>());
 
   const t = useTranslations("components.instagramForm");
@@ -102,6 +111,9 @@ export function InstagramForm(props: { className?: string }) {
     isPending,
     mutateAsync: getInstagramPost,
   } = useGetInstagramPostMutation();
+
+  const { isPending: isPendingUserPosts, mutateAsync: getUserPosts } =
+    useGetInstagramUserPostsMutation();
 
   const formSchema = useFormSchema();
 
@@ -218,6 +230,45 @@ export function InstagramForm(props: { className?: string }) {
     }
   }
 
+  async function onGetUserPosts() {
+    const usernameValue = usernameInputRef.current?.value || "";
+    if (!usernameValue || usernameValue.trim().length === 0) {
+      toast.error("Please enter a username");
+      return;
+    }
+
+    const username = getUsernameFromUrl(usernameValue) || usernameValue.trim();
+
+    try {
+      const { data, status } = await getUserPosts({ username });
+
+      if (status === HTTP_CODE_ENUM.OK && data.data) {
+        const posts = data.data;
+        console.log("=== Latest 50 Posts ===");
+        posts.forEach((post, index) => {
+          console.log(`${index + 1}. ${post.url}`);
+        });
+        console.log(`Total: ${posts.length} posts`);
+        toast.success(`Found ${posts.length} posts. Check console for links.`, {
+          id: "toast-success-posts",
+          position: "top-center",
+          duration: 3000,
+        });
+      } else {
+        toast.error("Failed to fetch posts", {
+          id: "toast-error-posts",
+          position: "top-center",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to fetch posts", {
+        id: "toast-error-posts",
+        position: "top-center",
+      });
+    }
+  }
+
   React.useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -283,6 +334,44 @@ export function InstagramForm(props: { className?: string }) {
         </form>
       </Form>
       <p className="text-muted-foreground text-center text-xs">{t("hint")}</p>
+
+      {/* User Posts Section */}
+      <div className="mt-8 w-full space-y-2 border-t pt-6">
+        <h3 className="text-center text-sm font-semibold">
+          Get Latest 50 Posts from Account
+        </h3>
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="relative w-full">
+            <Input
+              type="text"
+              ref={usernameInputRef}
+              placeholder="Enter username (e.g., instagram)"
+              className="w-full"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onGetUserPosts();
+                }
+              }}
+            />
+          </div>
+          <Button
+            disabled={isPendingUserPosts}
+            type="button"
+            onClick={onGetUserPosts}
+            className="bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-700 dark:hover:bg-blue-600"
+          >
+            {isPendingUserPosts ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Get Posts"
+            )}
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-center text-xs">
+          Enter username or profile URL. Links will be logged to console.
+        </p>
+      </div>
     </div>
   );
 }
