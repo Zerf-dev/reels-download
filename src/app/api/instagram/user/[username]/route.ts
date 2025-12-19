@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getInstagramUserPostsGraphQL, UserPostsResponse } from "./utils";
+import { getInstagramUserPostsGraphQL } from "../../[username]/utils";
 
 interface RouteContext {
   params: Promise<{
@@ -26,7 +26,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
     const status = response.status;
 
     if (status === 200) {
-      const data = (await response.json()) as UserPostsResponse;
+      const data = (await response.json()) as any;
 
       console.log("GraphQL Response:", JSON.stringify(data, null, 2));
 
@@ -40,7 +40,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
         posts =
           data.data.xdt_api__v1__feed__user_timeline_graphql_connection.edges
             .slice(0, 50)
-            .map((edge) => ({
+            .map((edge: any) => ({
               shortcode: edge.node.shortcode,
               id: edge.node.id,
               url: `https://www.instagram.com/p/${edge.node.shortcode}/`,
@@ -50,7 +50,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
       else if (data.data?.user?.edge_owner_to_timeline_media?.edges) {
         posts = data.data.user.edge_owner_to_timeline_media.edges
           .slice(0, 50)
-          .map((edge) => ({
+          .map((edge: any) => ({
             shortcode: edge.node.shortcode,
             id: edge.node.id,
             url: `https://www.instagram.com/p/${edge.node.shortcode}/`,
